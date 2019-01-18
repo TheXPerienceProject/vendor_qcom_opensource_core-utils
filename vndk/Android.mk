@@ -1,4 +1,6 @@
 ifeq ($(BOARD_VNDK_VERSION),)
+ifneq ($(DEVICE_DEFINES_OWN_VNDK),true)
+
 $(warning ************* BOARD VNDK is not enabled - compiling vndk-sp ***************************)
 LOCAL_PATH := $(call my-dir)
 
@@ -47,3 +49,4 @@ include $(BUILD_PHONY_PACKAGE)
 
 vndk_sp_dir :=
 endif
+endif #DEVICE_DEFINES_OWN_VNDK
