@@ -4,6 +4,7 @@
 
 LOCAL_PATH := $(call my-dir)
 
+ifeq ($(filter davinci,$(TARGET_DEVICE)),)
 #A/B builds require us to create the mount points at compile time.
 #Just creating it for all cases since it does not hurt.
 FIRMWARE_MOUNT_POINT := $(TARGET_OUT_VENDOR)/firmware_mnt
@@ -40,7 +41,7 @@ $(PERSIST_MOUNT_POINT):
 ifneq ($(TARGET_MOUNT_POINTS_SYMLINKS),false)
 	@ln -sf /mnt/vendor/persist $(TARGET_ROOT_OUT)/persist
 endif
-
+endif #TARGET_DEVICE
 ifeq ($(TARGET_ENABLE_VM_SUPPORT),true)
 VM_SYSTEM_MOUNT_POINT := $(TARGET_OUT_VENDOR)/vm-system
 $(VM_SYSTEM_MOUNT_POINT):
