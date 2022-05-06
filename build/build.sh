@@ -238,10 +238,11 @@ DIST_ENABLED=false
 QSSI_ARGS_WITHOUT_DIST=""
 DIST_DIR="out/dist"
 MERGED_TARGET_FILES="$DIST_DIR/merged-qssi_${TARGET_PRODUCT}-target_files.zip"
+LEGACY_TARGET_FILES="$DIST_DIR/${TARGET_PRODUCT}-target_files-*.zip"
 MERGED_OTA_ZIP="$DIST_DIR/merged-qssi_${TARGET_PRODUCT}-ota.zip"
-DIST_ENABLED_TARGET_LIST=("holi" "taro" "kalama" "pineapple" "lahaina" "kona" "sdm710" "sdm845" "msmnile" "sm6150" "trinket" "lito" "bengal" "atoll" "qssi" "qssi_32" "qssi_32go" "bengal_32" "bengal_32go")
+DIST_ENABLED_TARGET_LIST=("holi" "taro" "kalama" "pineapple" "lahaina" "kona" "sdm710" "sdm845" "msmnile" "sm6150" "trinket" "lito" "bengal" "atoll" "qssi" "qssi_32" "qssi_32go" "bengal_32" "bengal_32go" "sdm660_64")
 VIRTUAL_AB_ENABLED_TARGET_LIST=("kona" "lito" "taro" "kalama" "pineapple" "lahaina")
-DYNAMIC_PARTITION_ENABLED_TARGET_LIST=("holi" "taro" "kalama" "pineapple" "lahaina" "kona" "msmnile" "sdm710" "lito" "trinket" "atoll" "qssi" "qssi_32" "qssi_32go" "bengal" "bengal_32" "bengal_32go" "sm6150")
+DYNAMIC_PARTITION_ENABLED_TARGET_LIST=("holi" "taro" "kalama" "pineapple" "lahaina" "kona" "msmnile" "sdm710" "lito" "trinket" "atoll" "qssi" "qssi_32" "qssi_32go" "bengal" "bengal_32" "bengal_32go" "sm6150" "sdm660_64")
 DYNAMIC_PARTITIONS_IMAGES_PATH=$OUT
 DP_IMAGES_OVERRIDE=false
 TECHPACK_LIST=("camera_tp" "display_tp" "video_tp" "audio_tp" "sensors_tp" "cv_tp" "xr_tp")
@@ -475,13 +476,28 @@ function run_qiifa_for_techpackage () {
 }
 
 function run_qiifa () {
+    BUILD_TYPE=""
+    if [ "$1" == "techpack" ]; then
+        BUILD_TYPE="--techpack_build"
+    fi
     IFS=':' read -ra ADDR <<< "${LIST_TECH_PACKAGE:15}"
     if [[ -n ${ADDR[1]} && "${ADDR[1]}" == "golden" ]]; then
       command "run_qiifa_for_techpackage"
     fi
     QIIFA_SCRIPT="$QCPATH/commonsys-intf/QIIFA-fwk/qiifa_main.py"
     if [ -f $QIIFA_SCRIPT ]; then
-     command "python $QIIFA_SCRIPT --type all --enforced 1"
+     command "python $QIIFA_SCRIPT --type all --enforced 1 $BUILD_TYPE"
+    fi
+}
+
+function run_qiifa_dependency_checker() {
+    BUILD_TYPE=""
+    if [ "$1" == "techpack" ]; then
+        BUILD_TYPE="--techpack_build"
+    fi
+    QIIFA_SCRIPT="$QCPATH/commonsys-intf/QIIFA-fwk/qiifa_main.py"
+    if [ -f $QIIFA_SCRIPT ]; then
+     command "python $QIIFA_SCRIPT --type api_dep --enforced 1 $BUILD_TYPE"
     fi
 }
 
@@ -502,6 +518,7 @@ function build_target_only () {
     command "python -B $QTI_BUILDTOOLS_DIR/build/makefile-violation-scanner.py"
     QSSI_ARGS="$QSSI_ARGS SKIP_ABI_CHECKS=$SKIP_ABI_CHECKS"
     command "run_qiifa_initialization"
+    command "run_qiifa_dependency_checker target"
     command "make $QSSI_ARGS"
     if [ "$BUILDING_WITH_VSDK" = true ]; then
         command "cp vendor/qcom/otatools_snapshot/otatools.zip out/dist/otatools.zip"
@@ -532,6 +549,20 @@ function full_build () {
         command "cp $QSSI_OUT/system_ext.img $OUT/"
     fi
     merge_only
+}
+
+function nonqssi_legacy_build () {
+    command "source build/envsetup.sh"
+    if [ "$DP_IMAGES_OVERRIDE" = true ]; then
+       ARGS=${ARGS//"--dp_images_path=$DYNAMIC_PARTITIONS_IMAGES_PATH"/}
+    fi
+    command "make $ARGS"
+    if [ "$DIST_ENABLED" = true ] && [ "$BOARD_DYNAMIC_PARTITION_ENABLE" = true ]; then
+      check_if_file_exists "$DIST_DIR/super.img"
+      log "${TARGET_PRODUCT} copy $DIST_DIR/super.img to $OUT/ "
+      command "cp $DIST_DIR/super.img $OUT/"
+      command "unzip -jo -DD $LEGACY_TARGET_FILES IMAGES/*.img -x IMAGES/userdata.img -d $DYNAMIC_PARTITIONS_IMAGES_PATH"
+    fi
 }
 
 function run_dca() {
@@ -573,8 +604,9 @@ function build_techpack_only () {
     command "lunch ${TARGET}-${TARGET_BUILD_VARIANT}"
     QSSI_ARGS="$QSSI_ARGS SKIP_ABI_CHECKS=$SKIP_ABI_CHECKS"
     command "run_qiifa_initialization"
+    command "run_qiifa_dependency_checker techpack"
     command "make $QSSI_ARGS selinux_policy"
-    command "run_qiifa"
+    command "run_qiifa techpack"
 }
 
 # Check if qssi is supported on this target or not.
@@ -589,8 +621,7 @@ done
 # For non-QSSI targets
 if [ $QSSI_TARGET_FLAG -eq 0 ]; then
     log "${TARGET_PRODUCT} is not a QSSI target. Using legacy build process for compilation..."
-    command "source build/envsetup.sh"
-    command "make $ARGS"
+    nonqssi_legacy_build
 else # For QSSI targets
     log "Building Android using build.sh for ${TARGET_PRODUCT}..."
     log "QSSI_ARGS=\"$QSSI_ARGS\""
