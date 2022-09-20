@@ -234,7 +234,7 @@ ENABLE_VIRTUAL_AB=false
 # use these lists to pair target lunch options with their corresponding qssi type.
 TARGET_PRODUCT_MAPPING_QSSI=("holi" "taro" "kalama" "lahaina" "sdm710" "sdm845" "msmnile" "sm6150" "kona" "atoll" "trinket" "lito" "bengal" "qssi" "parrot" "bengal_515")
 TARGET_PRODUCT_MAPPING_QSSI_64=("kalama64" "pineapple" "qssi_64")
-TARGET_PRODUCT_MAPPING_QSSI_32=("bengal_32" "qssi_32" "monaco")
+TARGET_PRODUCT_MAPPING_QSSI_32=("bengal_32" "qssi_32")
 TARGET_PRODUCT_MAPPING_QSSI_32GO=("bengal_32go" "qssi_32go" "msm8937_lily")
 
 QSSI_TARGET_FLAG=1
